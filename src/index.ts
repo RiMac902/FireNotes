@@ -6,6 +6,7 @@ import cors from 'cors';
 import { PrismaClient } from '@prisma/client';
 import userRoutes from './routes/userRoutes';
 import authRoutes from './routes/authRoutes';
+import noteRoutes from './routes/noteRoutes';
 
 dotenv.config();
 
@@ -60,6 +61,7 @@ app.get('/api-docs', swaggerUi.setup(swaggerSpec, {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api', userRoutes);
+app.use('/api/notes', noteRoutes);
 
 app.get('/', (req: Request, res: Response) => {
   res.send('Express + TypeScript + Prisma Server');
