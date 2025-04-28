@@ -3,6 +3,7 @@ import { Server as HTTPServer } from 'http';
 import { PrismaClient } from '@prisma/client';
 import { RedisService } from './redisService';
 import { verifyToken } from '../utils/auth';
+import { fcmService } from './fcmService';
 
 interface AuthenticatedSocket extends Socket {
   user?: {
@@ -99,6 +100,38 @@ export class SocketService {
       }) => {
         const { chatId, content, type, replyToId } = data;
 
+        // Отримуємо інформацію про чат та відправника
+        const [chat, sender] = await Promise.all([
+          prisma.chat.findUnique({
+            where: { id: chatId },
+            include: {
+              members: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true
+                    }
+                  }
+                }
+              }
+            }
+          }),
+          prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          })
+        ]);
+
+        if (!chat || !sender) {
+          return;
+        }
+
         // Створення повідомлення в базі даних
         const message = await prisma.message.create({
           data: {
@@ -136,14 +169,25 @@ export class SocketService {
         // Відправка повідомлення всім учасникам чату
         this.io.to(chatId).emit('message:new', message);
 
-        // Оновлення лічильника непрочитаних
-        const members = await prisma.chatMember.findMany({
-          where: { chatId }
-        });
-
-        for (const member of members) {
+        // Оновлення лічильника непрочитаних та відправка FCM повідомлень
+        for (const member of chat.members) {
           if (member.userId !== userId) {
             await RedisService.incrementUnreadCount(member.userId, chatId);
+            
+            // Відправляємо FCM повідомлення
+            await fcmService.sendToUser(member.userId, {
+              title: chat.type === 'GROUP' ? chat.name || 'Group Chat' : sender.name || sender.email,
+              body: content,
+              data: {
+                type: 'NEW_MESSAGE',
+                chatId,
+                messageId: message.id,
+                senderId: userId,
+                senderName: sender.name || sender.email,
+                chatType: chat.type
+              }
+            });
+
             this.io.to(member.userId).emit('message:unread', {
               chatId,
               count: await RedisService.getUnreadCount(member.userId, chatId)

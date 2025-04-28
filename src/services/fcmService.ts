@@ -154,6 +154,53 @@ class FCMService {
     const userIds = members.map((member: { userId: string }) => member.userId);
     await this.sendToUsers(userIds, message);
   }
+
+  // Надіслати повідомлення про запит на дружбу
+  async sendFriendRequestNotification(
+    receiverId: string,
+    senderName: string,
+    requestId: string
+  ): Promise<void> {
+    await this.sendToUser(receiverId, {
+      title: 'You have a new friend request',
+      body: `${senderName} sent you a friend request`,
+      data: {
+        type: 'FRIEND_REQUEST',
+        requestId,
+        senderName
+      }
+    });
+  }
+
+  // Надіслати повідомлення про прийняття запиту на дружбу
+  async sendFriendRequestAcceptedNotification(
+    userId: string,
+    friendName: string
+  ): Promise<void> {
+    await this.sendToUser(userId, {
+      title: 'Friend request accepted',
+      body: `${friendName} accepted your friend request`,
+      data: {
+        type: 'FRIEND_REQUEST_ACCEPTED',
+        friendName
+      }
+    });
+  }
+
+  // Надіслати повідомлення про відхилення запиту на дружбу
+  async sendFriendRequestRejectedNotification(
+    userId: string,
+    friendName: string
+  ): Promise<void> {
+    await this.sendToUser(userId, {
+      title: 'Friend request rejected',
+      body: `${friendName} rejected your friend request`,
+      data: {
+        type: 'FRIEND_REQUEST_REJECTED',
+        friendName
+      }
+    });
+  }
 }
 
 export const fcmService = FCMService.getInstance(); 

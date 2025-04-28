@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../types/auth';
 import { WebhookService } from '../services/webhookService';
+import { fcmService } from '../services/fcmService';
 
 const prisma = new PrismaClient();
 
@@ -86,6 +87,13 @@ export const sendFriendRequest = async (req: AuthRequest, res: Response): Promis
       }
     });
 
+    // Send FCM notification
+    await fcmService.sendFriendRequestNotification(
+      receiverId,
+      sender.name || sender.email,
+      friendRequest.id
+    );
+
     res.status(201).json(friendRequest);
   } catch (error) {
     console.error('Error sending friend request:', error);
@@ -153,6 +161,12 @@ export const respondToFriendRequest = async (req: AuthRequest, res: Response): P
           }
         }
       });
+
+      // Send FCM notification
+      await fcmService.sendFriendRequestAcceptedNotification(
+        friendRequest.senderId,
+        req.user.name || req.user.email
+      );
     } else if (action === 'reject') {
       await prisma.friendRequest.update({
         where: { id: requestId },
@@ -171,6 +185,12 @@ export const respondToFriendRequest = async (req: AuthRequest, res: Response): P
           }
         }
       });
+
+      // Send FCM notification
+      await fcmService.sendFriendRequestRejectedNotification(
+        friendRequest.senderId,
+        req.user.name || req.user.email
+      );
     } else {
       res.status(400).json({ error: 'Invalid action' });
       return;
