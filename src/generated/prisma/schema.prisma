@@ -17,6 +17,243 @@ datasource db {
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
+  password  String
   name      String?
+  role      Role     @default(USER)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  sessions               Session[]
+  notes                  Note[] // Notes created by user
+  sharedNotes            SharedNote[] // Notes shared with user
+  sentFriendRequests     FriendRequest[] @relation("SentFriendRequests")
+  receivedFriendRequests FriendRequest[] @relation("ReceivedFriendRequests")
+  friends                UserFriend[]    @relation("UserFriends")
+  friendOf               UserFriend[]    @relation("FriendOf")
+  webhooks               Webhook[]
+  chatMembers            ChatMember[]
+  messages               Message[]       @relation("MessageAuthor")
+  notifications          Notification[]
+  fcmTokens              FcmToken[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  token        String   @unique
+  refreshToken String   @unique
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Note {
+  id         String       @id @default(uuid())
+  title      String
+  content    String // HTML content from Flutter Quill
+  userId     String
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  sharedWith SharedNote[]
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([updatedAt])
+}
+
+model SharedNote {
+  id        String   @id @default(uuid())
+  noteId    String
+  note      Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([noteId, userId])
+  @@index([noteId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model FriendRequest {
+  id         String              @id @default(uuid())
+  senderId   String
+  sender     User                @relation("SentFriendRequests", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   User                @relation("ReceivedFriendRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+  status     FriendRequestStatus @default(PENDING)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  @@unique([senderId, receiverId])
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([status])
+}
+
+model UserFriend {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation("UserFriends", fields: [userId], references: [id], onDelete: Cascade)
+  friendId  String
+  friend    User     @relation("FriendOf", fields: [friendId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, friendId])
+  @@index([userId])
+  @@index([friendId])
+}
+
+model Webhook {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  url       String
+  events    String[] // Array of event types to listen for
+  secret    String // Secret for signing webhook payloads
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Chat {
+  id            String       @id @default(uuid())
+  name          String? // для групових чатів
+  description   String? // опис групового чату
+  avatar        String? // URL аватара групового чату
+  type          ChatType     @default(PRIVATE)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  members       ChatMember[]
+  messages      Message[]
+  lastMessage   Message?     @relation("LastMessage", fields: [lastMessageId], references: [id])
+  lastMessageId String?      @unique
+
+  @@index([type])
+  @@index([createdAt])
+}
+
+model ChatMember {
+  id         String    @id @default(uuid())
+  chatId     String
+  userId     String
+  role       ChatRole  @default(MEMBER)
+  chat       Chat      @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
+  lastReadAt DateTime? // Added to track last read message
+
+  @@unique([chatId, userId])
+  @@index([chatId])
+  @@index([userId])
+}
+
+model Message {
+  id        String        @id @default(uuid())
+  chatId    String
+  userId    String
+  content   String
+  type      MessageType   @default(TEXT)
+  status    MessageStatus @default(SENT)
+  replyToId String?
+
+  // Relations
+  chat          Chat      @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  author        User      @relation("MessageAuthor", fields: [userId], references: [id], onDelete: Cascade)
+  replyTo       Message?  @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies       Message[] @relation("MessageReplies")
+  lastMessageIn Chat?     @relation("LastMessage")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  isDeleted Boolean  @default(false)
+
+  @@index([chatId])
+  @@index([userId])
+  @@index([replyToId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  content   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+model FcmToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device    String? // Опціональне поле для ідентифікації пристрою
+  platform  Platform // ios, android, web
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  isActive  Boolean  @default(true)
+
+  @@index([userId])
+  @@index([token])
+  @@index([platform])
+  @@index([isActive])
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum ChatType {
+  PRIVATE
+  GROUP
+}
+
+enum ChatRole {
+  ADMIN
+  MEMBER
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  FILE
+  SYSTEM
+}
+
+enum MessageStatus {
+  SENT
+  DELIVERED
+  READ
+}
+
+enum Platform {
+  IOS
+  ANDROID
+  WEB
 }

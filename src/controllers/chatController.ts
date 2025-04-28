@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../generated/prisma';
 import { AuthRequest } from '../types/auth';
 import { fcmService } from '../services/fcmService';
 
@@ -223,7 +223,7 @@ export const addGroupMembers = async (req: AuthRequest, res: Response): Promise<
         data: {
           type: 'ADDED_TO_GROUP',
           chatId: chat.id,
-          groupName: chat.name
+          groupName: chat.name || 'Unnamed Group'
         }
       });
     }
@@ -298,7 +298,7 @@ export const removeGroupMembers = async (req: AuthRequest, res: Response): Promi
         data: {
           type: 'REMOVED_FROM_GROUP',
           chatId: chat.id,
-          groupName: chat.name
+          groupName: chat.name || 'Unnamed Group'
         }
       });
     }
