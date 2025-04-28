@@ -1,3 +1,4 @@
 node_modules
 # Keep environment variables out of version control
 .env
+.firenotes-93ff1-firebase-adminsdk-fbsvc-a849498f49.json
