@@ -21,6 +21,8 @@ model User {
   role        Role         @default(USER)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+  
+  // Relations
   sessions    Session[]
   notes       Note[]       // Notes created by user
   sharedNotes SharedNote[] // Notes shared with user
@@ -29,6 +31,10 @@ model User {
   friends     UserFriend[] @relation("UserFriends")
   friendOf    UserFriend[] @relation("FriendOf")
   webhooks    Webhook[]
+  chatMembers ChatMember[]
+  messages    Message[]    @relation("MessageAuthor")
+  notifications Notification[]
+  fcmTokens   FcmToken[]
 
   @@index([email])
   @@index([role])
@@ -120,6 +126,94 @@ model Webhook {
   @@index([userId])
 }
 
+model Chat {
+  id          String       @id @default(uuid())
+  name        String?      // для групових чатів
+  type        ChatType     @default(PRIVATE)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  members     ChatMember[]
+  messages    Message[]
+  lastMessage Message?     @relation("LastMessage", fields: [lastMessageId], references: [id])
+  lastMessageId String?    @unique
+
+  @@index([type])
+  @@index([createdAt])
+}
+
+model ChatMember {
+  id        String   @id @default(uuid())
+  chatId    String
+  userId    String
+  role      ChatRole @default(MEMBER)
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  lastReadAt DateTime? // Added to track last read message
+
+  @@unique([chatId, userId])
+  @@index([chatId])
+  @@index([userId])
+}
+
+model Message {
+  id          String    @id @default(uuid())
+  chatId      String
+  userId      String
+  content     String
+  type        MessageType @default(TEXT)
+  status      MessageStatus @default(SENT)
+  replyToId   String?
+  
+  // Relations
+  chat        Chat      @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  author      User      @relation("MessageAuthor", fields: [userId], references: [id], onDelete: Cascade)
+  replyTo     Message?  @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies     Message[] @relation("MessageReplies")
+  lastMessageIn Chat?   @relation("LastMessage")
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  isDeleted   Boolean   @default(false)
+
+  @@index([chatId])
+  @@index([userId])
+  @@index([replyToId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  content   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+model FcmToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device    String?  // Опціональне поле для ідентифікації пристрою
+  platform  Platform // ios, android, web
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  isActive  Boolean  @default(true)
+
+  @@index([userId])
+  @@index([token])
+  @@index([platform])
+  @@index([isActive])
+}
+
 enum Role {
   USER
   ADMIN
@@ -129,4 +223,34 @@ enum FriendRequestStatus {
   PENDING
   ACCEPTED
   REJECTED
+}
+
+enum ChatType {
+  PRIVATE
+  GROUP
+}
+
+enum ChatRole {
+  ADMIN
+  MEMBER
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  FILE
+  SYSTEM
+}
+
+enum MessageStatus {
+  SENT
+  DELIVERED
+  READ
+}
+
+enum Platform {
+  IOS
+  ANDROID
+  WEB
 }
