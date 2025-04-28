@@ -6,6 +6,9 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
+# Install additional dependencies
+RUN npm install swagger-ui-express swagger-jsdoc cors @types/swagger-ui-express @types/swagger-jsdoc @types/cors
+
 # Copy Prisma schema
 COPY prisma ./prisma/
 
