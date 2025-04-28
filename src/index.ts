@@ -7,6 +7,7 @@ import { PrismaClient } from '@prisma/client';
 import userRoutes from './routes/userRoutes';
 import authRoutes from './routes/authRoutes';
 import noteRoutes from './routes/noteRoutes';
+import friendRoutes from './routes/friendRoutes';
 
 dotenv.config();
 
@@ -62,6 +63,7 @@ app.get('/api-docs', swaggerUi.setup(swaggerSpec, {
 app.use('/api/auth', authRoutes);
 app.use('/api', userRoutes);
 app.use('/api/notes', noteRoutes);
+app.use('/api/friends', friendRoutes);
 
 app.get('/', (req: Request, res: Response) => {
   res.send('Express + TypeScript + Prisma Server');

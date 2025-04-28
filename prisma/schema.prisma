@@ -24,6 +24,11 @@ model User {
   sessions    Session[]
   notes       Note[]       // Notes created by user
   sharedNotes SharedNote[] // Notes shared with user
+  sentFriendRequests     FriendRequest[] @relation("SentFriendRequests")
+  receivedFriendRequests FriendRequest[] @relation("ReceivedFriendRequests")
+  friends     UserFriend[] @relation("UserFriends")
+  friendOf    UserFriend[] @relation("FriendOf")
+  webhooks    Webhook[]
 
   @@index([email])
   @@index([role])
@@ -73,7 +78,55 @@ model SharedNote {
   @@index([createdAt])
 }
 
+model FriendRequest {
+  id        String   @id @default(uuid())
+  senderId  String
+  sender    User     @relation("SentFriendRequests", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver  User     @relation("ReceivedFriendRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+  status    FriendRequestStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([senderId, receiverId])
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([status])
+}
+
+model UserFriend {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation("UserFriends", fields: [userId], references: [id], onDelete: Cascade)
+  friendId  String
+  friend    User     @relation("FriendOf", fields: [friendId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, friendId])
+  @@index([userId])
+  @@index([friendId])
+}
+
+model Webhook {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  url       String
+  events    String[] // Array of event types to listen for
+  secret    String   // Secret for signing webhook payloads
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
 enum Role {
   USER
   ADMIN
+}
+
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
 }
