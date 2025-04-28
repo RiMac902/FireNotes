@@ -17,8 +17,10 @@ export class SessionService {
 
     const refreshToken = crypto.randomBytes(40).toString('hex');
 
+    // Calculate expiration date based on REFRESH_TOKEN_EXPIRY
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days for refresh token
+    const days = parseInt(this.REFRESH_TOKEN_EXPIRY);
+    expiresAt.setDate(expiresAt.getDate() + days);
 
     await prisma.session.create({
       data: {
