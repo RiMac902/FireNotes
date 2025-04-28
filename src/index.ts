@@ -10,10 +10,13 @@ import noteRoutes from './routes/noteRoutes';
 import friendRoutes from './routes/friendRoutes';
 import chatRoutes from './routes/chatRoutes';
 import { SocketService } from './services/socketService';
+import { createServer } from 'http';
+import { RedisService } from './services/redisService';
 
 dotenv.config();
 
 const app: Express = express();
+const httpServer = createServer(app);
 const port = process.env.PORT || 3000;
 const prisma = new PrismaClient();
 
@@ -79,7 +82,7 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 // Start server
-const server = app.listen(port, async () => {
+const server = httpServer.listen(port, async () => {
   try {
     // Test database connection
     await prisma.$connect();
@@ -87,6 +90,9 @@ const server = app.listen(port, async () => {
     
     console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
     console.log(`📚[docs]: API documentation available at http://localhost:${port}/api-docs`);
+
+    // Initialize Redis
+    await RedisService.initialize();
   } catch (error) {
     console.error('❌ Database connection failed:', error);
     process.exit(1);

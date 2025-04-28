@@ -142,7 +142,7 @@ export class SocketService {
             replyToId
           },
           include: {
-            user: {
+            author: {
               select: {
                 id: true,
                 name: true,
@@ -151,7 +151,7 @@ export class SocketService {
             },
             replyTo: {
               include: {
-                user: {
+                author: {
                   select: {
                     id: true,
                     name: true,
