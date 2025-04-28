@@ -7,6 +7,7 @@ import {
   getFriendRequests,
   getFriends
 } from '../controllers/friendController';
+import { PrismaClient } from '../generated/prisma';
 
 const router = Router();
 

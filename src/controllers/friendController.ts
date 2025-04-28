@@ -1,5 +1,5 @@
-import { Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { Request, Response } from 'express';
+import { PrismaClient } from '../generated/prisma';
 import { AuthRequest } from '../types/auth';
 import { WebhookService } from '../services/webhookService';
 import { fcmService } from '../services/fcmService';

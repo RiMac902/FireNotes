@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import cors from 'cors';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from './generated/prisma';
 import userRoutes from './routes/userRoutes';
 import authRoutes from './routes/authRoutes';
 import noteRoutes from './routes/noteRoutes';

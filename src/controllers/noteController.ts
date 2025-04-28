@@ -1,5 +1,5 @@
-import { Response } from 'express';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Request, Response } from 'express';
+import { PrismaClient } from '../generated/prisma';
 import { AuthRequest } from '../types/auth';
 
 const prisma = new PrismaClient();

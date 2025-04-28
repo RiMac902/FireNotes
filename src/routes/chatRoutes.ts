@@ -7,6 +7,7 @@ import {
   removeGroupMembers,
   getUserGroups
 } from '../controllers/chatController';
+import { PrismaClient } from '../generated/prisma';
 
 const router = Router();
 

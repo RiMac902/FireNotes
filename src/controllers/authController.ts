@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient } from '../generated/prisma';
 import bcrypt from 'bcryptjs';
 import { SessionService } from '../services/sessionService';
 

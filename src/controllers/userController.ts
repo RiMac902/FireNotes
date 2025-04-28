@@ -1,13 +1,19 @@
 import { Request, Response } from 'express';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient } from '../generated/prisma';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 export const createUser = async (req: Request, res: Response): Promise<void> => {
-  const { email, name } = req.body;
+  const { email, name, password } = req.body;
   try {
+    const hashedPassword = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { email, name },
+      data: { 
+        email, 
+        name,
+        password: hashedPassword
+      },
     });
     res.status(201).json(user);
   } catch (error) {

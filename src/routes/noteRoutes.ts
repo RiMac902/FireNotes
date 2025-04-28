@@ -9,6 +9,7 @@ import {
   shareNote,
   unshareNote
 } from '../controllers/noteController';
+import { PrismaClient } from '../generated/prisma';
 
 const router = Router();
 

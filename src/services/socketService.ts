@@ -1,6 +1,6 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HTTPServer } from 'http';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../generated/prisma';
 import { RedisService } from './redisService';
 import { verifyToken } from '../utils/auth';
 import { fcmService } from './fcmService';
