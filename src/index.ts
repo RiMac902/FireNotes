@@ -8,6 +8,8 @@ import userRoutes from './routes/userRoutes';
 import authRoutes from './routes/authRoutes';
 import noteRoutes from './routes/noteRoutes';
 import friendRoutes from './routes/friendRoutes';
+import chatRoutes from './routes/chatRoutes';
+import { SocketService } from './services/socketService';
 
 dotenv.config();
 
@@ -16,7 +18,10 @@ const port = process.env.PORT || 3000;
 const prisma = new PrismaClient();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true
+}));
 app.use(express.json());
 
 // Error handling middleware
@@ -30,21 +35,29 @@ const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Express API with TypeScript and Prisma',
+      title: 'Chat API',
       version: '1.0.0',
-      description: 'API documentation for Express TypeScript Prisma application',
+      description: 'A chat application API',
     },
     servers: [
       {
-        url: 'http://localhost:3000',
-        description: 'Development server',
+        url: `http://localhost:${port}`,
       },
     ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
   },
   apis: ['./src/routes/*.ts'],
 };
 
-const swaggerSpec = swaggerJsdoc(swaggerOptions);
+const swaggerDocs = swaggerJsdoc(swaggerOptions);
 
 // Test route
 app.get('/test', (req: Request, res: Response) => {
@@ -52,18 +65,14 @@ app.get('/test', (req: Request, res: Response) => {
 });
 
 // Swagger UI
-app.use('/api-docs', swaggerUi.serve);
-app.get('/api-docs', swaggerUi.setup(swaggerSpec, {
-  explorer: true,
-  customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: "API Documentation"
-}));
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 // Routes
+app.use('/api/users', userRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api', userRoutes);
 app.use('/api/notes', noteRoutes);
 app.use('/api/friends', friendRoutes);
+app.use('/api/chats', chatRoutes);
 
 app.get('/', (req: Request, res: Response) => {
   res.send('Express + TypeScript + Prisma Server');
@@ -108,3 +117,8 @@ process.on('SIGTERM', async () => {
     console.log('Process terminated');
   });
 });
+
+// Initialize Socket.IO
+new SocketService(server);
+
+export default app;
