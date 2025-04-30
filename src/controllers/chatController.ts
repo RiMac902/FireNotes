@@ -348,4 +348,170 @@ export const getUserGroups = async (req: AuthRequest, res: Response): Promise<vo
     console.error('Error fetching user groups:', error);
     res.status(500).json({ error: 'Error fetching user groups' });
   }
+};
+
+// Створення one-on-one чату
+export const createOneOnOneChat = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const { userId } = req.body;
+    const creatorId = req.user.id;
+
+    // Перевіряємо чи користувачі є друзями
+    const friendship = await prisma.userFriend.findFirst({
+      where: {
+        OR: [
+          { userId: creatorId, friendId: userId },
+          { userId: userId, friendId: creatorId }
+        ]
+      }
+    });
+
+    if (!friendship) {
+      res.status(403).json({ error: 'You can only chat with your friends' });
+      return;
+    }
+
+    // Перевіряємо чи чат вже існує
+    const existingChat = await prisma.chat.findFirst({
+      where: {
+        type: 'PRIVATE',
+        members: {
+          every: {
+            userId: {
+              in: [creatorId, userId]
+            }
+          }
+        }
+      }
+    });
+
+    if (existingChat) {
+      res.json(existingChat);
+      return;
+    }
+
+    // Створюємо чат
+    const chat = await prisma.chat.create({
+      data: {
+        type: 'PRIVATE',
+        members: {
+          create: [
+            {
+              userId: creatorId,
+              role: 'MEMBER'
+            },
+            {
+              userId,
+              role: 'MEMBER'
+            }
+          ]
+        }
+      },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Відправляємо FCM повідомлення
+    await fcmService.sendToUser(userId, {
+      title: 'New Chat',
+      body: `${req.user.name || req.user.email} started a chat with you`,
+      data: {
+        type: 'ONE_ON_ONE_CHAT_CREATED',
+        chatId: chat.id
+      }
+    });
+
+    res.status(201).json(chat);
+  } catch (error) {
+    console.error('Error creating one-on-one chat:', error);
+    res.status(500).json({ error: 'Error creating one-on-one chat' });
+  }
+};
+
+// Отримання повідомлень чату
+export const getChatMessages = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const { chatId } = req.params;
+    const userId = req.user.id;
+
+    // Перевіряємо чи користувач є учасником чату
+    const member = await prisma.chatMember.findFirst({
+      where: {
+        chatId,
+        userId
+      }
+    });
+
+    if (!member) {
+      res.status(403).json({ error: 'You are not a member of this chat' });
+      return;
+    }
+
+    // Отримуємо повідомлення
+    const messages = await prisma.message.findMany({
+      where: {
+        chatId,
+        isDeleted: false
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        replyTo: {
+          include: {
+            author: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'asc'
+      }
+    });
+
+    // Оновлюємо lastReadAt
+    await prisma.chatMember.update({
+      where: {
+        id: member.id
+      },
+      data: {
+        lastReadAt: new Date()
+      }
+    });
+
+    res.json(messages);
+  } catch (error) {
+    console.error('Error fetching chat messages:', error);
+    res.status(500).json({ error: 'Error fetching chat messages' });
+  }
 }; 

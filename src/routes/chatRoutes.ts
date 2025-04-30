@@ -5,7 +5,9 @@ import {
   updateGroupInfo,
   addGroupMembers,
   removeGroupMembers,
-  getUserGroups
+  getUserGroups,
+  createOneOnOneChat,
+  getChatMessages
 } from '../controllers/chatController';
 import { PrismaClient } from '../generated/prisma';
 
@@ -157,5 +159,50 @@ router.delete('/groups/:chatId/members', auth, removeGroupMembers);
  *         description: List of user's group chats
  */
 router.get('/groups', auth, getUserGroups);
+
+/**
+ * @swagger
+ * /api/chats/one-on-one:
+ *   post:
+ *     summary: Create a one-on-one chat
+ *     tags: [Chats]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *             properties:
+ *               userId:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: One-on-one chat created successfully
+ */
+router.post('/one-on-one', auth, createOneOnOneChat);
+
+/**
+ * @swagger
+ * /api/chats/{chatId}/messages:
+ *   get:
+ *     summary: Get chat messages
+ *     tags: [Chats]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: chatId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of chat messages
+ */
+router.get('/:chatId/messages', auth, getChatMessages);
 
 export default router; 

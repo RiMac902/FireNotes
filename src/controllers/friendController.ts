@@ -40,6 +40,12 @@ export const sendFriendRequest = async (req: AuthRequest, res: Response): Promis
     const { userId: receiverId } = req.body;
     const senderId = req.user.id;
 
+    // Prevent self-friend requests
+    if (senderId === receiverId) {
+      res.status(400).json({ error: 'Cannot send friend request to yourself' });
+      return;
+    }
+
     // Check if users exist
     const [sender, receiver] = await Promise.all([
       prisma.user.findUnique({ where: { id: senderId } }),
@@ -125,6 +131,12 @@ export const respondToFriendRequest = async (req: AuthRequest, res: Response): P
 
     if (!friendRequest) {
       res.status(404).json({ error: 'Friend request not found' });
+      return;
+    }
+
+    // Prevent accepting self-friend requests
+    if (friendRequest.senderId === friendRequest.receiverId) {
+      res.status(400).json({ error: 'Cannot accept friend request from yourself' });
       return;
     }
 

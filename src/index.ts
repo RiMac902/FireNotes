@@ -23,7 +23,9 @@ const prisma = new PrismaClient();
 // Middleware
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 
@@ -81,8 +83,11 @@ app.get('/', (req: Request, res: Response) => {
   res.send('Express + TypeScript + Prisma Server');
 });
 
+// Initialize Socket.IO
+const socketService = new SocketService(httpServer);
+
 // Start server
-const server = httpServer.listen(port, async () => {
+httpServer.listen(port, async () => {
   try {
     // Test database connection
     await prisma.$connect();
@@ -102,29 +107,13 @@ const server = httpServer.listen(port, async () => {
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
-  server.close(() => {
-    process.exit(1);
-  });
+  process.exit(1);
 });
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (error) => {
   console.error('Unhandled Rejection:', error);
-  server.close(() => {
-    process.exit(1);
-  });
+  process.exit(1);
 });
-
-// Handle graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('SIGTERM received. Shutting down gracefully...');
-  await prisma.$disconnect();
-  server.close(() => {
-    console.log('Process terminated');
-  });
-});
-
-// Initialize Socket.IO
-new SocketService(server);
 
 export default app;

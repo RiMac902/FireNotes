@@ -22,10 +22,15 @@ export class SocketService {
   constructor(httpServer: HTTPServer) {
     this.io = new SocketIOServer(httpServer, {
       cors: {
-        origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-        methods: ['GET', 'POST'],
-        credentials: true
-      }
+        origin: "*",
+        methods: ["GET", "POST"],
+        credentials: true,
+        allowedHeaders: ["Authorization"]
+      },
+      transports: ["websocket"],
+      path: "/socket.io",
+      pingTimeout: 60000,
+      pingInterval: 25000
     });
     this.prisma = new PrismaClient();
     this.redisService = new RedisService();
@@ -36,7 +41,7 @@ export class SocketService {
     // Authentication middleware
     this.io.use(async (socket: Socket, next) => {
       try {
-        const token = socket.handshake.auth.token;
+        const token = socket.handshake.headers.authorization?.split(' ')[1] || socket.handshake.auth.token;
         if (!token) {
           return next(new Error('Authentication error'));
         }
@@ -48,12 +53,17 @@ export class SocketService {
         };
         next();
       } catch (error) {
+        console.error('Socket authentication error:', error);
         next(new Error('Authentication error'));
       }
     });
 
     this.io.on('connection', async (socket) => {
-      const userId = (socket as any).user.id;
+      const userId = (socket as AuthenticatedSocket).user?.id;
+      if (!userId) {
+        socket.disconnect();
+        return;
+      }
 
       // Користувач онлайн
       await RedisService.setUserOnline(userId);

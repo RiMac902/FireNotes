@@ -295,7 +295,7 @@ const config = {
     "binaryTargets": [
       {
         "fromEnvVar": null,
-        "value": "linux-musl-openssl-3.0.x",
+        "value": "linux-musl-arm64-openssl-3.0.x",
         "native": true
       }
     ],
@@ -314,11 +314,12 @@ const config = {
     "db"
   ],
   "activeProvider": "postgresql",
+  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {
         "fromEnvVar": "DATABASE_URL",
-        "value": "postgresql://postgres:postgres@db:5432/mydb?schema=public"
+        "value": null
       }
     }
   },
